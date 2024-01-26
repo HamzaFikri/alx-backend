@@ -51,3 +51,4 @@ class Server:
                 'page_size': page_size,
                 'data': self.__dataset[index: index + page_size]
                 }
+    
