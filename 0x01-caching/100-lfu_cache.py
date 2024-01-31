@@ -1,40 +1,48 @@
 #!/usr/bin/python3
-""" Python caching systems """
-from base_caching import BaseCaching
-from collections import OrderedDict
+""" Create LFUCache class that inherits from BaseCaching """
+BaseCaching = __import__('base_caching').BaseCaching
 
 
 class LFUCache(BaseCaching):
-    """ LFU caching system
-    """
+    """ Define LFUCache """
+
     def __init__(self):
-        """ Initialize class instance. """
+        """ Initialize LFUCache """
+        self.queue = []
+        self.lfu = {}
         super().__init__()
-        self.cache_data = OrderedDict()
-        self.mru = ""
 
     def put(self, key, item):
-        """ Add an item in the cache
-        """
+        """ Assign the item to the dictionary """
         if key and item:
-            if len(self.cache_data) >= BaseCaching.MAX_ITEMS:
-                if key in self.cache_data:
-                    self.cache_data.update({key: item})
-                    self.mru = key
-                else:
-                    # discard the most recently used item
-                    discarded = self.mru
-                    del self.cache_data[discarded]
-                    print("DISCARD: {}".format(discarded))
-                    self.cache_data[key] = item
-                    self.mru = key
+            if (len(self.queue) >= self.MAX_ITEMS and
+                    not self.cache_data.get(key)):
+                delete = self.queue.pop(0)
+                self.lfu.pop(delete)
+                self.cache_data.pop(delete)
+                print('DISCARD: {}'.format(delete))
+
+            if self.cache_data.get(key):
+                self.queue.remove(key)
+                self.lfu[key] += 1
             else:
-                self.cache_data[key] = item
-                self.mru = key
+                self.lfu[key] = 0
+
+            insert_index = 0
+            while (insert_index < len(self.queue) and
+                   not self.lfu[self.queue[insert_index]]):
+                insert_index += 1
+            self.queue.insert(insert_index, key)
+            self.cache_data[key] = item
 
     def get(self, key):
-        """ Get an item by key
-        """
-        if key in self.cache_data:
-            self.mru = key
-            return self.cache_data[key]
+        """ Return the value associated with the given key """
+        if self.cache_data.get(key):
+            self.lfu[key] += 1
+            if self.queue.index(key) + 1 != len(self.queue):
+                while (self.queue.index(key) + 1 < len(self.queue) and
+                       self.lfu[key] >=
+                       self.lfu[self.queue[self.queue.index(key) + 1]]):
+                    self.queue.insert(self.queue.index(key) + 1,
+                                      self.queue.pop(self.queue.index(key)))
+        return self.cache_data.get(key)
